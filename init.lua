@@ -983,3 +983,28 @@ require('lazy').setup({
 
 -- The line beneath this is called `modeline`. See `:help modeline`
 -- vim: ts=2 sts=2 sw=2 et
+local function open_nvim_tree()
+  -- open the tree
+  require('nvim-tree.api').tree.open()
+end
+
+vim.api.nvim_create_autocmd({ 'VimEnter' }, {
+  callback = function(data)
+    -- buffer is a real file on the disk
+    local real_file = vim.fn.filereadable(data.file) == 1
+
+    -- buffer is a [No Name]
+    local no_name = data.file == '' and vim.bo[data.buf].buftype == ''
+
+    if not real_file and not no_name then
+      return
+    end
+
+    -- open the tree, find the file but don't focus it
+    if real_file then
+      require('nvim-tree.api').tree.toggle { focus = false, find_file = true }
+    elseif no_name then
+      require('nvim-tree.api').tree.toggle { focus = true, find_file = false }
+    end
+  end,
+})
