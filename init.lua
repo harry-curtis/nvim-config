@@ -959,6 +959,13 @@ require('lazy').setup({
       require('nvim-tree').setup {}
     end,
   },
+  {
+    'lukas-reineke/indent-blankline.nvim',
+    main = 'ibl',
+    ---@module "ibl"
+    ---@type ibl.config
+    opts = {},
+  },
 }, {
   ui = {
     -- If you are using a Nerd Font: set icons to an empty table which will use the
