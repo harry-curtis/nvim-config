@@ -696,7 +696,8 @@ require('lazy').setup({
         lua = { 'stylua' },
         json = { 'jq' },
         markdown = { 'prettier', 'injected' },
-        -- Conform can also run multiple formatters sequentially
+        html = { 'superhtml' },
+        jsx = { 'deno' },
         -- python = { "isort", "black" },
         --
         -- You can use 'stop_after_first' to run the first available formatter from the list
@@ -727,12 +728,12 @@ require('lazy').setup({
           -- `friendly-snippets` contains a variety of premade snippets.
           --    See the README about individual language/framework/plugin snippets:
           --    https://github.com/rafamadriz/friendly-snippets
-          -- {
-          --   'rafamadriz/friendly-snippets',
-          --   config = function()
-          --     require('luasnip.loaders.from_vscode').lazy_load()
-          --   end,
-          -- },
+          {
+            'rafamadriz/friendly-snippets',
+            config = function()
+              require('luasnip.loaders.from_vscode').lazy_load()
+            end,
+          },
         },
         opts = {},
       },
@@ -803,16 +804,8 @@ require('lazy').setup({
       signature = { enabled = true },
     },
   },
-
   {
-    -- CUSTOM: [19/09/2025] Theme was changed from 'folke/tokyonight.nvim' to 'sainhe/sonokai'.
-    'sainnhe/sonokai',
-    lazy = false,
-    priority = 1000, -- Make sure to load this before all the other start plugins.
-    config = function()
-      vim.g.sonokai_enable_italic = true
-      vim.cmd.colorscheme 'sonokai'
-    end,
+    { import = 'custom.plugins' },
   },
 
   -- Highlight todo, notes, etc in comments
@@ -865,7 +858,6 @@ require('lazy').setup({
       --  Check out: https://github.com/echasnovski/mini.nvim
     end,
   },
-
   -- CUSTOM: To see LaTeX blocks in Markdown files using render-markdown.nvim,
   -- tree-sitter-cli needs to be installed on the system path for
   -- nvim-treesitter to install the latex parser. You can install
@@ -927,31 +919,6 @@ require('lazy').setup({
   -- In normal mode type `<space>sh` then write `lazy.nvim-plugin`
   -- you can continue same window with `<space>sr` which resumes last telescope search
   --
-  -- CUSTOM: render-markdown.nvim
-  -- the 'pylatexenc' package for your machine. For that to be possible, you'll
-  -- also need to have a Python interpreter installed, PIP, and have all three
-  -- accessible via the path variable.
-  --
-  {
-    'MeanderingProgrammer/render-markdown.nvim',
-    dependencies = { 'nvim-treesitter/nvim-treesitter', 'nvim-tree/nvim-web-devicons' }, -- if you prefer nvim-web-devicons
-    ---@module 'render-markdown'
-    ---@type render.md.UserConfig
-    opts = {},
-  },
-
-  -- CUSTOM: Added the VimTeX plugin. The PDF viewer that I went for is Sioyek, but
-  -- the vimtex_view_method can just be updated if a different viewer is
-  -- installed.
-  {
-    'lervag/vimtex',
-    lazy = false, -- we don't want to lazy load VimTeX
-    -- tag = "v2.15", -- uncomment to pin to a specific release
-    init = function()
-      -- VimTeX configuration goes here, e.g.
-      vim.g.vimtex_view_method = 'zathura'
-    end,
-  },
 
   -- CUSTOM: Added the nvim-tree plugin for file tree viewing.
   {
@@ -986,6 +953,75 @@ require('lazy').setup({
         end,
       })
     end,
+  },
+  {
+    'folke/ts-comments.nvim',
+    opts = {},
+    event = 'VeryLazy',
+    enabled = vim.fn.has 'nvim-0.10.0' == 1,
+    lang = {
+      astro = '<!-- %s -->',
+      axaml = '<!-- %s -->',
+      blueprint = '// %s',
+      c = '// %s',
+      c_sharp = '// %s',
+      clojure = { ';; %s', '; %s' },
+      cpp = '// %s',
+      cs_project = '<!-- %s -->',
+      cue = '// %s',
+      fsharp = '// %s',
+      fsharp_project = '<!-- %s -->',
+      gleam = '// %s',
+      glimmer = '{{! %s }}',
+      graphql = '# %s',
+      handlebars = '{{! %s }}',
+      hcl = '# %s',
+      html = '<!-- %s -->',
+      hyprlang = '# %s',
+      ini = '; %s',
+      ipynb = '# %s',
+      javascript = {
+        '// %s', -- default commentstring when no treesitter node matches
+        '/* %s */',
+        call_expression = '// %s', -- specific commentstring for call_expression
+        jsx_attribute = '// %s',
+        jsx_element = '{/* %s */}',
+        jsx_fragment = '{/* %s */}',
+        spread_element = '// %s',
+        statement_block = '// %s',
+      },
+      kdl = '// %s',
+      php = '// %s',
+      rego = '# %s',
+      rescript = '// %s',
+      rust = { '// %s', '/* %s */' },
+      sql = '-- %s',
+      styled = '/* %s */',
+      svelte = '<!-- %s -->',
+      templ = {
+        '// %s',
+        component_block = '<!-- %s -->',
+      },
+      terraform = '# %s',
+      tsx = {
+        '// %s', -- default commentstring when no treesitter node matches
+        '/* %s */',
+        call_expression = '// %s', -- specific commentstring for call_expression
+        jsx_attribute = '// %s',
+        jsx_element = '{/* %s */}',
+        jsx_fragment = '{/* %s */}',
+        spread_element = '// %s',
+        statement_block = '// %s',
+      },
+      twig = '{# %s #}',
+      typescript = { '// %s', '/* %s */' }, -- langs can have multiple commentstrings
+      vue = '<!-- %s -->',
+      xaml = '<!-- %s -->',
+    },
+  },
+  -- CUSTOM: nvim-ts-context-commentstring: Used to make treesitter context aware based on the position of the cursor. Useful for adding comments in files with subsections in other languages, e.g. JSX files.
+  {
+    'JoosepAlviste/nvim-ts-context-commentstring',
   },
 }, {
   ui = {
