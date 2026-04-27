@@ -1,9 +1,56 @@
+local function virtual_text_document_handler(uri, res, client)
+  if not res then
+    return nil
+  end
+
+  local lines = vim.split(res.result, '\n')
+  local bufnr = vim.uri_to_bufnr(uri)
+
+  local current_buf = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+  if #current_buf ~= 0 then
+    return nil
+  end
+
+  vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+  vim.api.nvim_set_option_value('readonly', true, { buf = bufnr })
+  vim.api.nvim_set_option_value('modified', false, { buf = bufnr })
+  vim.api.nvim_set_option_value('modifiable', false, { buf = bufnr })
+  vim.lsp.buf_attach_client(bufnr, client.id)
+end
+
+local function virtual_text_document(uri, client)
+  local params = {
+    textDocument = {
+      uri = uri,
+    },
+  }
+  local result = client.request_sync('deno/virtualTextDocument', params)
+  virtual_text_document_handler(uri, result, client)
+end
+
+local function denols_handler(err, result, ctx, config)
+  if not result or vim.tbl_isempty(result) then
+    return nil
+  end
+
+  local client = vim.lsp.get_client_by_id(ctx.client_id)
+  for _, res in pairs(result) do
+    local uri = res.uri or res.targetUri
+    if uri:match '^deno:' then
+      virtual_text_document(uri, client)
+      res['uri'] = uri
+      res['targetUri'] = uri
+    end
+  end
+
+  vim.lsp.handlers[ctx.method](err, result, ctx, config)
+end
+
 return {
   {
     'neovim/nvim-lspconfig',
     dependencies = {
       { 'j-hui/fidget.nvim', opts = {} },
-
       'saghen/blink.cmp',
     },
     config = function()
@@ -15,22 +62,12 @@ return {
             vim.keymap.set(mode, keys, func, { buffer = event.buf, desc = 'LSP: ' .. desc })
           end
 
-          map('grn', vim.lsp.buf.rename, '[R]e[n]ame')
-
-          map('gra', vim.lsp.buf.code_action, '[G]oto Code [A]ction', { 'n', 'x' })
-
           map('grr', require('telescope.builtin').lsp_references, '[G]oto [R]eferences')
-
           map('gri', require('telescope.builtin').lsp_implementations, '[G]oto [I]mplementation')
-
           map('grd', require('telescope.builtin').lsp_definitions, '[G]oto [D]efinition')
-
           map('grD', vim.lsp.buf.declaration, '[G]oto [D]eclaration')
-
           map('gO', require('telescope.builtin').lsp_document_symbols, 'Open Document Symbols')
-
           map('gW', require('telescope.builtin').lsp_dynamic_workspace_symbols, 'Open Workspace Symbols')
-
           map('grt', require('telescope.builtin').lsp_type_definitions, '[G]oto [T]ype Definition')
 
           local function client_supports_method(client, method, bufnr)
@@ -104,11 +141,9 @@ return {
 
       local servers = {
         phpactor = {},
-
         superhtml = {
           filetypes = { 'html', 'php' },
         },
-
         lua_ls = {
           settings = {
             Lua = {
@@ -118,20 +153,57 @@ return {
             },
           },
         },
-
         pyright = {},
+        tailwindcss = {
+          filetypes = { 'html', 'javascript', 'typescript', 'javascriptreact', 'typescriptreact', 'vue', 'svelte', 'rust' },
+          settings = {
+            tailwindCSS = {
+              lint = {
+                cssConflict = 'warning',
+                invalidApply = 'error',
+              },
+              validate = true,
+            },
+          },
+        },
+        denols = {
+          root_dir = function(fname)
+            return vim.fs.root(fname, { 'deno.json', 'deno.jsonc' })
+          end,
+          handlers = {
+            ['textDocument/definition'] = denols_handler,
+            ['textDocument/typeDefinition'] = denols_handler,
+            ['textDocument/references'] = denols_handler,
+          },
+        },
+        ts_ls = {
+          root_dir = function(fname)
+            if vim.fs.root(fname, { 'deno.json', 'deno.jsonc' }) then
+              return nil
+            end
+            return vim.fs.root(fname, { 'package.json', 'tsconfig.json', 'jsconfig.json', '.git' })
+          end,
+          single_file_support = false,
+          settings = {
+            typescript = {
+              inlayHints = {
+                includeInlayParameterNameHints = 'all',
+                includeInlayParameterNameHintsWhenArgumentMatchesName = false,
+                includeInlayFunctionParameterTypeHints = true,
+                includeInlayVariableTypeHints = true,
+                includeInlayPropertyDeclarationTypeHints = true,
+                includeInlayFunctionLikeReturnTypeHints = true,
+                includeInlayEnumMemberValueHints = true,
+              },
+            },
+          },
+        },
       }
 
-      for server_name, server_opts in pairs(servers) do
-        server_opts.capabilities = vim.tbl_deep_extend('force', {}, capabilities, server_opts.capabilities or {})
-        vim.lsp.config[server_name] = vim.tbl_deep_extend('force', vim.lsp.config[server_name], server_opts)
-        vim.lsp.enable(server_name)
+      for name, opts in pairs(servers) do
+        opts.capabilities = vim.tbl_deep_extend('force', {}, capabilities, opts.capabilities or {})
+        vim.lsp.enable(name, opts)
       end
-
-      local ensure_installed = vim.tbl_keys(servers or {})
-      vim.list_extend(ensure_installed, {
-        'stylua', -- Used to format Lua code
-      })
     end,
   },
 }
